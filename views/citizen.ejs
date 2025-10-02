@@ -5,170 +5,181 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Delhi AQI Dashboard</title>
 
-  <!-- Bootstrap CSS -->
+  <!-- Bootstrap + Icons + Leaflet -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
-  <!-- Flatpickr CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Font Awesome -->
   <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 
   <style>
-    :root { --crimson: #DC143C; }
-    body { font-family: Arial, sans-serif; background: #f8f9fa; }
-    h2 { text-align: center; margin: 20px 0; color: var(--crimson); }
-    #routeMap { height: 500px; border-radius: 12px; }
-    #pmChart { background: white; border-radius: 12px; padding: 10px; }
-    .card { border: none; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
-    .form-control:focus { box-shadow: 0 0 0 0.2rem rgba(220,20,60,.25); border-color: var(--crimson); }
-    .btn-crimson { background-color: var(--crimson); color: #fff; }
-    .btn-crimson:hover { background-color: #b01030; color: #fff; }
+    :root { --crimson: #DC143C; --dark: #212529; --light: #f8f9fa; }
+    body { font-family: 'Poppins', sans-serif; background: var(--light); color: var(--dark); }
+    h2 { text-align: center; margin: 25px 0; font-weight: 600; color: var(--crimson); }
+    .card { border: none; border-radius: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.05); }
+    .section-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; color: var(--crimson); }
+    .map-container { height: 360px; border-radius: 12px; }
+    .btn-crimson { background-color: var(--crimson); color: #fff; border-radius: 8px; }
+    .btn-crimson:hover { background-color: #b01030; }
+    .calendar-box { background: #fefefe; border-radius: 12px; padding: 15px; }
+    footer { text-align: center; padding: 20px; font-size: 0.9rem; color: #777; margin-top: 20px; }
   </style>
 </head>
 
 <body>
-  <div class="container-fluid">
+  <!-- Header -->
+  <div class="container">
     <h2><i class="fas fa-city"></i> Delhi AQI Dashboard</h2>
+  </div>
 
-    <div class="row">
-      <!-- Left Panel -->
-      <div class="col-md-4">
-        <!-- Route Planner -->
-        <div class="card my-3 p-3" style="border-radius:12px; background: #e3f2fd;">
-          <h5><i class="fas fa-route text-primary"></i> Plan Your Route</h5>
-          <input type="text" id="source" class="form-control mb-2" placeholder="Source (A-D)">
-          <input type="text" id="destination" class="form-control mb-2" placeholder="Destination (A-D)">
-          
-          <select id="travelMode" class="form-select mb-2">
-            <option value="walk">Walk</option>
-            <option value="bike">Bike</option>
-            <option value="car">Car</option>
-          </select>
-
-          <div class="form-check mb-2">
-            <input type="checkbox" class="form-check-input" id="preferScenic">
-            <label class="form-check-label" for="preferScenic">Prefer Scenic / Tourist Spots</label>
-          </div>
-
-          <button id="calculateRouteBtn" class="btn btn-crimson w-100 mb-3">
-            <i class="fas fa-map-marked-alt"></i> Calculate Route
-          </button>
-        </div>
-
-        <!-- Health Alerts -->
-        <div class="card my-3 p-3" style="border-radius:12px; background: #fff3cd; border-left:6px solid #ffc107;">
-          <h5><i class="fas fa-heartbeat text-warning"></i> Real-Time Health Alerts</h5>
-          <ul id="healthAlerts" class="list-group list-group-flush">
-            <li class="list-group-item">No alerts yet</li>
-          </ul>
-        </div>
-
-        <!-- Smart Calendar -->
-        <div class="card my-3 p-3" style="border-radius:12px; background: #e6ffe6;">
-          <h5><i class="fas fa-calendar-alt text-success"></i> Smart AQI Calendar</h5>
-          <div id="smartCalendar"></div>
+  <div class="container">
+    <div class="row g-4">
+      
+      <!-- 🌫 AQI Map -->
+      <div class="col-md-6">
+        <div class="card p-3">
+          <div class="section-title"><i class="fas fa-smog"></i> Current AQI Map</div>
+          <div id="aqiMap" class="map-container"></div>
+          <p class="text-muted mt-2 mb-0"><i class="fas fa-info-circle"></i> Zoom in to see location-wise air quality markers.</p>
         </div>
       </div>
 
-      <!-- Right Panel: Map + Chart -->
-      <div class="col-md-8">
-        <div id="routeMap" class="my-3"></div>
-        <canvas id="pmChart" class="my-3"></canvas>
+      <!-- 🚗 Route Planner -->
+      <div class="col-md-6">
+        <div class="card p-3">
+          <div class="section-title"><i class="fas fa-route"></i> Smart Route Planner</div>
+          <input type="text" id="source" class="form-control mb-2" placeholder="Enter Source (or leave blank for current location)">
+          <input type="text" id="destination" class="form-control mb-3" placeholder="Enter Destination (e.g. India Gate)">
+          <button id="calculateRouteBtn" class="btn btn-crimson w-100 mb-3">
+            <i class="fas fa-map-marked-alt"></i> Calculate Route
+          </button>
+          <div id="routeMap" class="map-container"></div>
+        </div>
+      </div>
+
+      <!-- 📅 AQI Calendar -->
+      <div class="col-md-6">
+        <div class="card p-3">
+          <div class="section-title"><i class="fas fa-calendar-alt"></i> Smart AQI Calendar</div>
+          <div id="smartCalendar" class="calendar-box"></div>
+        </div>
+      </div>
+
+      <!-- 📊 AQI Chart -->
+      <div class="col-md-6">
+        <div class="card p-3">
+          <div class="section-title"><i class="fas fa-chart-line"></i> AQI Trends</div>
+          <canvas id="pmChart" style="height: 300px;"></canvas>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Dependencies -->
+  <footer>
+    🚀 Powered by Open-Meteo, OpenStreetMap, and Leaflet Routing Machine
+  </footer>
+
+  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-  <!-- Smart Calendar Setup -->
   <script>
-    // Dummy AQI data for specific dates
-    const aqiDates = {
-      "2025-09-20": 180,
-      "2025-09-21": 150,
-      "2025-09-22": 210,
-      "2025-09-23": 90
-    };
+    let userCoords = [28.6139, 77.2090]; // Delhi default
+    let routeControl;
 
+    // 🌫 AQI Map
+    const aqiMap = L.map('aqiMap').setView(userCoords, 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(aqiMap);
+
+    // 🚗 Route Map
+    const routeMap = L.map('routeMap').setView(userCoords, 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(routeMap);
+
+    // 🎯 Get User Location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        userCoords = [pos.coords.latitude, pos.coords.longitude];
+        aqiMap.setView(userCoords, 12);
+        L.marker(userCoords).addTo(aqiMap).bindPopup("📍 You are here").openPopup();
+        plotAQI(userCoords[0], userCoords[1]);
+      }, () => plotAQI(userCoords[0], userCoords[1]));
+    } else plotAQI(userCoords[0], userCoords[1]);
+
+    // 🌫 Fetch and display AQI
+    async function plotAQI(lat, lon) {
+      const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi`);
+      const data = await res.json();
+      const aqi = data?.current?.us_aqi || 120;
+      const color = aqi <= 50 ? "green" : aqi <= 100 ? "yellow" : aqi <= 200 ? "orange" : "red";
+
+      L.circleMarker([lat, lon], { radius: 14, color, fillColor: color, fillOpacity: 0.6 })
+        .addTo(aqiMap)
+        .bindPopup(`<b>AQI: ${aqi}</b>`);
+    }
+
+    // 🚗 Route Planner
+    document.getElementById("calculateRouteBtn").addEventListener("click", async () => {
+      const srcInput = document.getElementById("source").value.trim();
+      const destInput = document.getElementById("destination").value.trim();
+      if (!destInput) return alert("Please enter a destination.");
+
+      const srcCoords = srcInput ? await geocode(srcInput) : userCoords;
+      const destCoords = await geocode(destInput);
+      if (!srcCoords || !destCoords) return alert("Invalid source or destination.");
+
+      if (routeControl) routeMap.removeControl(routeControl);
+      routeControl = L.Routing.control({
+        waypoints: [L.latLng(srcCoords), L.latLng(destCoords)],
+        routeWhileDragging: true
+      }).addTo(routeMap);
+    });
+
+    async function geocode(place) {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place + ', Delhi, India')}`);
+      const data = await res.json();
+      if (data.length > 0) return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+      return null;
+    }
+
+    // 📅 Smart Calendar with AQI Colors
     flatpickr("#smartCalendar", {
       inline: true,
-      enable: Object.keys(aqiDates),
-      onDayCreate: function(dObj, dStr, fp, dayElem) {
+      enable: ["2025-10-01", "2025-10-02", "2025-10-03"],
+      onDayCreate: (dObj, dStr, fp, dayElem) => {
+        const aqiSample = { "2025-10-01": 80, "2025-10-02": 180, "2025-10-03": 240 };
         const dateStr = dayElem.dateObj.toISOString().split('T')[0];
-        if (aqiDates[dateStr]) {
-          const aqi = aqiDates[dateStr];
-          const color = aqi<=50?'green':aqi<=100?'yellow':aqi<=150?'orange':aqi<=200?'red':aqi<=300?'purple':'maroon';
-          dayElem.style.backgroundColor = color;
-          dayElem.style.color = 'white';
+        if (aqiSample[dateStr]) {
+          const aqi = aqiSample[dateStr];
+          const color = aqi <= 100 ? "green" : aqi <= 200 ? "orange" : "red";
+          dayElem.style.background = color; 
+          dayElem.style.color = "#fff";
           dayElem.title = `AQI: ${aqi}`;
         }
       }
     });
-  </script>
 
-  <!-- PM2.5 Chart Setup -->
-  <script>
-    const hours = Array.from({length:24}, (_,i)=>i+":00");
-    const pmCurrent = [120,130,140,150,160,170,180,190,200,210,220,210,200,190,180,170,160,150,140,130,120,110,100,90];
-    const pmPrevYear = [100,110,120,130,140,150,160,170,180,190,200,190,180,170,160,150,140,130,120,110,100,90,80,70];
-
+    // 📊 AQI Chart
     const ctx = document.getElementById('pmChart').getContext('2d');
-    const pmChart = new Chart(ctx, {
+    new Chart(ctx, {
       type: 'line',
       data: {
-        labels: hours,
-        datasets: [
-          {
-            label: 'Current Year PM2.5',
-            data: pmCurrent,
-            borderColor: 'red',
-            backgroundColor: 'rgba(255,0,0,0.1)',
-            tension: 0.3,
-            fill: true
-          },
-          {
-            label: 'Previous Year PM2.5',
-            data: pmPrevYear,
-            borderColor: 'blue',
-            backgroundColor: 'rgba(0,0,255,0.1)',
-            tension: 0.3,
-            fill: true
-          }
-        ]
+        labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+        datasets: [{
+          label: 'AQI',
+          data: [90, 120, 150, 180, 110, 80, 200],
+          borderColor: '#DC143C',
+          tension: 0.4,
+          fill: false
+        }]
       },
       options: {
         responsive: true,
-        plugins: {
-          legend: { position: 'top' },
-          title: { display: true, text: 'Hourly PM2.5 Comparison (Current vs Previous Year)' },
-          tooltip: {
-            callbacks: {
-              label: function(context){
-                let val = context.raw;
-                let alert = val>200?" ⚠️ High Pollution!":"";
-                return `${context.dataset.label}: ${val}${alert}`;
-              }
-            }
-          }
-        },
-        scales: {
-          y: { beginAtZero: true, title: { display: true, text: 'µg/m³' } },
-          x: { title: { display: true, text: 'Hour' } }
-        }
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, title: { display: true, text: 'AQI' } } }
       }
     });
   </script>
-
-  <!-- Custom Logic -->
-  <script src="/citizen.js"></script>
 </body>
 </html>

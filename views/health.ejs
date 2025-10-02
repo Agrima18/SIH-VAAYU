@@ -2,171 +2,209 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Health Advisory</title>
+  <title>Smart Health Advisory | Delhi AQI Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #f0f2f5;
-      margin: 0;
-      padding: 0;
     }
-
     .health-widget {
-      max-width: 600px;
-      margin: 30px auto;
+      max-width: 650px;
+      margin: 40px auto;
       padding: 20px;
       border-radius: 12px;
       background: #f8f9fa;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-
-    h2, h3 {
+    h2 {
       text-align: center;
-      color: #333;
+      font-weight: 600;
     }
-
     .hw-form {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-bottom: 20px;
     }
-
-    .hw-form label {
-      font-weight: bold;
-    }
-
-    .hw-form input[type="number"] {
+    input[type="number"] {
       padding: 6px 10px;
       border-radius: 5px;
       border: 1px solid #ccc;
-      width: 100%;
-      box-sizing: border-box;
     }
-
-    .hw-checkboxes {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .hw-checkboxes label {
-      font-weight: normal;
-    }
-
     #hw-update-btn {
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      background-color: #007bff;
-      color: #fff;
-      cursor: pointer;
-      font-size: 16px;
       margin-top: 10px;
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
-
     #hw-update-btn:hover {
-      background-color: #0056b3;
+      background: #0056b3;
     }
-
     .hw-output {
       margin-top: 20px;
-      padding: 15px;
-      border-radius: 8px;
       background: #eef3f7;
-    }
-
-    .hw-output div {
-      margin-bottom: 10px;
-      font-weight: bold;
-      color: #444;
-    }
-
-    .pollutant-panel {
-      margin-top: 25px;
-      padding: 15px;
       border-radius: 8px;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 15px;
     }
-
-    .pollutant-panel ul {
-      list-style: none;
-      padding-left: 0;
+    #hw-speak-btn {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border: none;
+      background: #28a745;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
     }
-
-    .pollutant-panel li {
-      margin-bottom: 8px;
-    }
-
-    .pollutant-panel strong {
-      color: #007bff;
+    #hw-speak-btn:hover {
+      background: #1e7e34;
     }
   </style>
 </head>
-<body>
-  <div id="health-widget" class="health-widget">
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: crimson; position: sticky; top: 0; z-index: 1000;">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="/">Delhi AQI Dashboard</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-      aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-      <ul class="navbar-nav">
-        <li class="nav-item mx-1">
-          <a class="btn btn-light btn-sm" href="/signup">Signup</a>
-        </li>
-        <li class="nav-item mx-1">
-          <a class="btn btn-light btn-sm" href="/login">Login</a>
-        </li>
-        <li class="nav-item mx-1">
-          <a class="btn btn-light btn-sm" href="/register">Register</a>
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
 
-    <!-- User inputs -->
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-danger sticky-top">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="/">Delhi AQI Dashboard</a>
+    </div>
+  </nav>
+
+  <div class="health-widget">
+    <h2>🧠 Smart Health Advisory</h2>
+    <p class="text-center text-muted">Get personalized air quality & health recommendations</p>
+
+    <!-- Form -->
     <div class="hw-form">
       <label for="hw-age">Age</label>
-      <input id="hw-age" type="number" min="0" max="130" value="28">
+      <input id="hw-age" type="number" min="0" max="120" value="28">
 
       <label>Pre-existing Conditions</label>
-      <div class="hw-checkboxes">
+      <div>
         <label><input type="checkbox" value="asthma"> Asthma</label>
         <label><input type="checkbox" value="heart"> Heart Disease</label>
         <label><input type="checkbox" value="diabetes"> Diabetes</label>
         <label><input type="checkbox" value="none"> None</label>
       </div>
 
-      <button id="hw-update-btn" type="button">Update</button>
+      <button id="hw-update-btn">Update</button>
     </div>
 
     <!-- Output -->
     <div class="hw-output">
       <div id="hw-aqi-display"></div>
+      <div id="hw-aqi-emoji" style="font-size:30px"></div>
+      <div id="hw-aqi-bar" style="height:20px;border-radius:10px;"></div>
+      <div id="hw-weather"></div>
       <div id="hw-warning"></div>
       <div id="hw-personalized"></div>
       <div id="hw-actions"></div>
-    </div>
-
-    <!-- Pollutant effects -->
-    <div class="pollutant-panel">
-      <h3>Pollutant Effects on Human Body</h3>
-      <ul>
-        <li><strong>PM2.5:</strong> Lung & heart issues, asthma trigger.</li>
-        <li><strong>PM10:</strong> Irritates throat & eyes.</li>
-        <li><strong>NO₂:</strong> Respiratory irritation.</li>
-        <li><strong>SO₂:</strong> Throat irritation, asthma attacks.</li>
-        <li><strong>O₃:</strong> Chest pain, cough, worsens asthma.</li>
-        <li><strong>CO:</strong> Reduces oxygen, causes dizziness.</li>
-      </ul>
+      <button id="hw-speak-btn">🔊 Speak Advice</button>
+      <div id="hw-ai-advice" class="mt-3 p-2 bg-white rounded"></div>
     </div>
   </div>
 
-  <script src="/public/js/health.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const aqiDisplay = document.getElementById("hw-aqi-display");
+      const aqiBar = document.getElementById("hw-aqi-bar");
+      const aqiEmoji = document.getElementById("hw-aqi-emoji");
+      const weatherDiv = document.getElementById("hw-weather");
+      const warning = document.getElementById("hw-warning");
+      const personalized = document.getElementById("hw-personalized");
+      const actions = document.getElementById("hw-actions");
+      const aiAdvice = document.getElementById("hw-ai-advice");
+      const updateBtn = document.getElementById("hw-update-btn");
+      const speakBtn = document.getElementById("hw-speak-btn");
+
+      let currentAQI = 150, temp = 30, humidity = 50, condition = "Clear", latestAdvice = "";
+
+      // Fetch AQI and Weather
+      try {
+        const [aqiRes, weatherRes] = await Promise.all([
+          fetch("/api/aqi?city=Delhi"),
+          fetch("/api/weather?city=Delhi")
+        ]);
+        const aqiData = await aqiRes.json();
+        const wData = await weatherRes.json();
+        currentAQI = aqiData.aqi || 150;
+        temp = wData.temp || 30;
+        humidity = wData.humidity || 50;
+        condition = wData.condition || "Clear";
+      } catch (err) {
+        console.log("Error fetching data:", err);
+      }
+
+      updateUI();
+
+      async function updateUI() {
+        aqiDisplay.innerHTML = `Current AQI in <b>Delhi</b>: <strong>${currentAQI}</strong>`;
+        aqiBar.style.backgroundColor = getColor(currentAQI);
+        aqiEmoji.textContent = getEmoji(currentAQI);
+        weatherDiv.textContent = `🌡️ ${temp}°C | 💧 ${humidity}% | ☁️ ${condition}`;
+      }
+
+      updateBtn.addEventListener("click", async () => {
+        const age = parseInt(document.getElementById("hw-age").value);
+        const selected = Array.from(document.querySelectorAll("input[type=checkbox]:checked")).map(c => c.value);
+        const hasCondition = selected.some(v => ["asthma","heart","diabetes"].includes(v));
+
+        const risk = getRisk(currentAQI);
+        warning.innerHTML = `<span style="color:${getColor(currentAQI)}">${risk} Risk</span>`;
+        personalized.innerHTML = `👤 Age: ${age} | Conditions: ${selected.join(", ") || "None"}`;
+        actions.innerHTML = `<ul><li>✅ Stay updated on air quality</li><li>⚠️ ${risk === "Hazardous" ? "Avoid going outside" : "Take precautions"}</li></ul>`;
+
+        aiAdvice.innerHTML = "<em>Generating AI advice...</em>";
+
+        try {
+          const res = await fetch("/api/health-advice", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ aqi: currentAQI, temp, age, hasCondition })
+          });
+          const data = await res.json();
+          latestAdvice = data.advice || "⚠️ Could not fetch AI advice.";
+          aiAdvice.innerHTML = `🧠 ${latestAdvice}`;
+        } catch {
+          aiAdvice.innerHTML = "⚠️ AI service unavailable.";
+        }
+      });
+
+      speakBtn.addEventListener("click", () => {
+        const utterance = new SpeechSynthesisUtterance(latestAdvice || "Click update to get advice first.");
+        utterance.lang = "en-IN";
+        speechSynthesis.speak(utterance);
+      });
+
+      function getColor(aqi) {
+        if (aqi <= 50) return "#4caf50";
+        if (aqi <= 100) return "#cddc39";
+        if (aqi <= 200) return "#ff9800";
+        if (aqi <= 300) return "#f44336";
+        return "#6a1b9a";
+      }
+      function getEmoji(aqi) {
+        if (aqi <= 50) return "🌿🙂";
+        if (aqi <= 100) return "😐";
+        if (aqi <= 200) return "😷";
+        if (aqi <= 300) return "🤢";
+        return "☠️";
+      }
+      function getRisk(aqi) {
+        if (aqi <= 50) return "Good";
+        if (aqi <= 100) return "Moderate";
+        if (aqi <= 200) return "Unhealthy";
+        if (aqi <= 300) return "Very Unhealthy";
+        return "Hazardous";
+      }
+    });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

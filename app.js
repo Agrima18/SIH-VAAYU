@@ -1,3 +1,4 @@
+// ===================== ENV & MODULES =====================
 require('dotenv').config();
 const express = require("express");
 const path = require("path");
@@ -12,8 +13,9 @@ const flash = require("connect-flash");
 
 const app = express();
 const server = http.createServer(app);
+const PORT = process.env.PORT || 3000;
 
-// ===== Middleware =====
+// ===================== MIDDLEWARE =====================
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
@@ -22,11 +24,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(expressLayouts);
 app.set('layout', 'layout/boilerplate');
 
-// ===== MongoDB Connection =====
-// =================== DB CONNECTION ===================
+// ===================== DATABASE =====================
 mongoose.connect("mongodb://127.0.0.1:27017/wanderlust")
-  .then(() => console.log("DB Connected"))
-  .catch(err => console.log("DB Error:", err));
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.log("❌ DB Connection Error:", err));
 
 const sessionConfig = {
   store: MongoStore.create({ mongoUrl: "mongodb://127.0.0.1:27017/Delhiusers" }),
@@ -38,7 +39,7 @@ const sessionConfig = {
 app.use(session(sessionConfig));
 app.use(flash());
 
-// ===== User Schema & Model =====
+// ===================== USER MODEL =====================
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -46,34 +47,36 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ["citizen", "government", "companies"], default: "citizen" }
 });
 
-// Hash password before saving
+// hash password before save
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
-
-// Compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
 const User = mongoose.model("User", userSchema);
 
-// ===== Auth Middleware =====
+// ===================== MIDDLEWARES =====================
 function requireLogin(req, res, next) {
-  if (!req.session.userId) {
-    return res.redirect("/listings/login");
-  }
+  if (!req.session.userId) return res.redirect("/listings/login");
   next();
 }
 
-// ===== Sample AQI & Data =====
-const sampleAQI = { city: "Delhi", aqi: 180, dominantPollutant: "PM2.5", temp: 32, humidity: 50 };
+// ===================== SAMPLE DATA =====================
+const sampleAQI = {
+  city: "Delhi",
+  aqi: 180,
+  dominantPollutant: "PM2.5",
+  temp: 32,
+  humidity: 50
+};
 const multipleLocations = [
-  { city: "Delhi", lat: 28.6448, lng: 77.216721, aqi: 180, dominantPollutant: "PM2.5" },
-  { city: "Noida", lat: 28.5355, lng: 77.3910, aqi: 150, dominantPollutant: "PM10" },
-  { city: "Gurugram", lat: 28.4595, lng: 77.0266, aqi: 120, dominantPollutant: "O3" },
+  { city: "Delhi", lat: 28.6448, lng: 77.216721, aqi: 180 },
+  { city: "Noida", lat: 28.5355, lng: 77.3910, aqi: 150 },
+  { city: "Gurugram", lat: 28.4595, lng: 77.0266, aqi: 120 },
 ];
 const touristSpots = [
   { name: "India Gate", lat: 28.6129, lng: 77.2295 },
@@ -81,92 +84,161 @@ const touristSpots = [
   { name: "Qutub Minar", lat: 28.5244, lng: 77.1855 },
 ];
 
-const policies = [
-  { name: "Odd-Even Vehicle Rule", implemented: true },
-  { name: "Industrial Emission Control", implemented: true },
-  { name: "Construction Dust Control", implemented: false },
-];
-const products = [
-  { name: "EV Incentive Program", desc: "Promoting electric vehicles" },
-  { name: "Green Delhi Plantation Drive", desc: "Urban greening initiative" },
-  { name: "Industrial Scrubber Upgrade", desc: "Reducing factory emissions" },
-];
-const statsSummary = {
-  totalUsers: 1250,
-  totalCompanies: 40,
-  activePolicies: policies.filter(p => p.implemented).length
-};
+// ===================== ROUTES =====================
 
-// ===== Helper Functions =====
-function getEdgeWeight(edge, alpha = 1, beta = 1, gamma = 1, preferScenic = false) {
-  return alpha * edge.aqi + beta * edge.distance + (preferScenic ? -gamma * edge.tourist : 0);
-}
-function dijkstra(graph, start, end, alpha, beta, gamma, preferScenic) {
-  const distances = {}, prev = {}, pq = new Set(Object.keys(graph));
-  Object.keys(graph).forEach(n => distances[n] = Infinity);
-  distances[start] = 0;
-  while (pq.size) {
-    const u = [...pq].reduce((min, node) => distances[node] < distances[min] ? node : min, [...pq][0]);
-    pq.delete(u);
-    if (u === end) break;
-    graph[u].forEach(edge => {
-      const alt = distances[u] + getEdgeWeight(edge, alpha, beta, gamma, preferScenic);
-      if (alt < distances[edge.to]) { distances[edge.to] = alt; prev[edge.to] = u; }
+// 🧠 Health Advisory Page
+app.get("/views/health", requireLogin, (req, res) => {
+  res.render("health");
+});
+
+// 🧠 AI Health Advice API
+app.post("/api/health-advice", async (req, res) => {
+  const { aqi, temp, age, hasCondition } = req.body;
+  const prompt = `
+You are a health advisor. Based on:
+- AQI: ${aqi}
+- Temperature: ${temp}°C
+- Age: ${age}
+- Pre-existing conditions: ${hasCondition}
+Give 3 short, practical health recommendations (max 3 lines). Use emojis like ✅⚠️☠️.
+`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const advice = data.choices?.[0]?.message?.content || "⚠️ Unable to generate advice.";
+    res.json({ advice });
+  } catch (err) {
+    console.error("AI API Error:", err);
+    res.json({ advice: "⚠️ AI service unavailable." });
+  }
+});
+
+// 🌫 AQI API
+app.get("/api/aqi", async (req, res) => {
+  const city = req.query.city || "Delhi";
+  const url = `https://api.waqi.info/feed/${city}/?token=${process.env.AQICN_API_KEY}`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    res.json({ aqi: data?.data?.aqi || 150 });
+  } catch (err) {
+    res.json({ aqi: 150 });
+  }
+});
+
+// 🌦 Weather API
+app.get("/api/weather", async (req, res) => {
+  const city = req.query.city || "Delhi";
+  const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    res.json({
+      temp: data.main.temp,
+      humidity: data.main.humidity,
+      condition: data.weather[0].main
+    });
+  } catch (err) {
+    res.json({ temp: 30, humidity: 50, condition: "Clear" });
+  }
+});
+
+// 🤖 AI Air Recommendation Page
+app.get("/views/airecommendation", requireLogin, (req, res) => {
+  res.render("airecommendation", {
+    city: "Delhi",
+    aqi: 180,
+    summary: "AI-based air quality analysis not yet generated. Use the health advisory to get personalized tips."
+  });
+});
+
+// 👤 Citizen Dashboard
+app.get("/views/citizen", requireLogin, async (req, res) => {
+  const city = "Delhi";
+  try {
+    const aqiRes = await fetch(`https://api.waqi.info/feed/${city}/?token=${process.env.AQICN_API_KEY}`);
+    const aqiData = await aqiRes.json();
+    const weatherRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.WEATHER_API_KEY}&units=metric`);
+    const weatherData = await weatherRes.json();
+
+    res.render("citizen", {
+      city,
+      aqi: aqiData?.data?.aqi || 150,
+      dominantPollutant: aqiData?.data?.dominentpol || "PM2.5",
+      temp: weatherData?.main?.temp || 30,
+      humidity: weatherData?.main?.humidity || 50
+    });
+  } catch (err) {
+    console.error("❌ Citizen route error:", err);
+    res.render("citizen", {
+      city,
+      aqi: 150,
+      dominantPollutant: "PM2.5",
+      temp: 30,
+      humidity: 50
     });
   }
-  const path = [];
-  let u = end;
-  while (prev[u]) { path.unshift(u); u = prev[u]; }
-  if (u === start) path.unshift(start);
-  return path;
-}
-function getHealthRecommendation(aqi, age, symptoms, experience) {
-  const alerts = [];
-  if (aqi > 100 || experience === 'high') alerts.push("⚠️ Wear an N95 mask outdoors");
-  if (aqi > 150) alerts.push("🏠 Limit outdoor activity, stay indoors");
-  if (symptoms?.includes("asthma") || symptoms?.includes("heart")) alerts.push("💨 Avoid strenuous outdoor activity");
-  if (aqi > 200) alerts.push("🔴 Use indoor air purifier if available");
-  return alerts.length ? alerts : ["✅ Air quality is good"];
-}
+});
 
-// ===== Routes =====
+// 📜 Policy Page
+app.get("/views/policy", requireLogin, (req, res) => {
+  res.render("policy", {
+    title: "Air Quality & Health Policies",
+    policies: [
+      {
+        heading: "🌿 National Clean Air Programme (NCAP)",
+        content: "Aims to reduce PM2.5 and PM10 levels by 20–30% in cities by 2025."
+      },
+      {
+        heading: "🚗 Vehicle Emission Standards (BS-VI)",
+        content: "Mandates reduced sulfur content in fuels and improved vehicle technology."
+      },
+      {
+        heading: "🏭 Industrial Emission Controls",
+        content: "Requires Continuous Emission Monitoring Systems and clean fuel use."
+      },
+      {
+        heading: "🏠 Citizen Participation",
+        content: "Promotes public transport, tree planting, and avoiding open burning."
+      },
+      {
+        heading: "⚖️ Right to Clean Air",
+        content: "Recognized under Article 21 as a fundamental right."
+      }
+    ]
+  });
+});
+
+// 🏠 Dashboard
 app.get("/", (req, res) => res.redirect("/dashboard"));
-
 app.get("/dashboard", requireLogin, (req, res) => {
-  const apiKey = process.env.AQICN_API_KEY || "YOUR_API_KEY";
-  res.render("dashboard", { aqiData: sampleAQI, aqiLocations: multipleLocations, touristSpots, apiKey });
-});
-app.get('/views/citizen', (req, res) => {
-  res.render('citizen'); // No need for .ejs extension
-});
-app.get("/policy", requireLogin, (req, res) => res.render("policy", { policies, products, statsSummary }));
-
-app.post("/api/citizen-route", (req, res) => {
-  const { source, destination, preferScenic, age, symptoms, experience } = req.body;
-  const graph = {
-    A: [{ to: 'B', distance: 2, aqi: 120, tourist: 5 }, { to: 'C', distance: 3, aqi: 200, tourist: 0 }],
-    B: [{ to: 'C', distance: 2, aqi: 100, tourist: 10 }, { to: 'D', distance: 4, aqi: 150, tourist: 2 }],
-    C: [{ to: 'D', distance: 2, aqi: 80, tourist: 7 }],
-    D: []
-  };
-  const coords = { A: [28.6139, 77.2090], B: [28.62, 77.21], C: [28.63, 77.22], D: [28.64, 77.23] };
-  const route = dijkstra(graph, source, destination, 1, 1, 1, preferScenic);
-  const alerts = getHealthRecommendation(sampleAQI.aqi, age, symptoms, experience);
-  const pathLatLng = route.map(n => coords[n]);
-  res.json({ route, pathLatLng, alerts });
+  res.render("dashboard", {
+    aqiData: sampleAQI,
+    aqiLocations: multipleLocations,
+    touristSpots,
+    apiKey: process.env.AQICN_API_KEY
+  });
 });
 
-// ===== Auth Routes =====
-
-// 📝 Register
+// ===================== AUTH ROUTES =====================
 app.get("/listings/register", (req, res) => res.render("listings/register"));
-
 app.post("/listings/register", async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
     const existing = await User.findOne({ email });
     if (existing) return res.send("⚠️ Email already registered");
-
     const user = new User({ username, email, password, role });
     await user.save();
     req.session.userId = user._id;
@@ -177,23 +249,14 @@ app.post("/listings/register", async (req, res) => {
   }
 });
 
-// 🔐 Login
 app.get("/listings/login", (req, res) => res.render("listings/login"));
-
 app.post("/listings/login", async (req, res) => {
   try {
     const { identifier, password } = req.body;
-
-    // Try finding by username or email
-    const user = await User.findOne({
-      $or: [{ username: identifier }, { email: identifier }]
-    });
-
+    const user = await User.findOne({ $or: [{ username: identifier }, { email: identifier }] });
     if (!user) return res.send("❌ User not found");
-
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.send("❌ Invalid password");
-
     req.session.userId = user._id;
     res.redirect("/dashboard");
   } catch (err) {
@@ -202,12 +265,11 @@ app.post("/listings/login", async (req, res) => {
   }
 });
 
-
-// 🚪 Logout
 app.get("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/listings/login"));
 });
 
-// ===== Start Server =====
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => console.log(`🌍 Server running at http://localhost:${PORT}`));
+// ===================== SERVER =====================
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
